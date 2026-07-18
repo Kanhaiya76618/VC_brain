@@ -20,6 +20,10 @@ async function chatOnce(
 ): Promise<string> {
   const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
     method: 'POST',
+    // A provider that hangs (accepts the request, never responds) would
+    // otherwise stall the whole agent pipeline — fail fast and let the
+    // caller's retry/fallback logic take over.
+    signal: AbortSignal.timeout(90_000),
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
