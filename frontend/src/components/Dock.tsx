@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, GitBranch, MessageSquare, StickyNote, Layers, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark, Radar, SlidersHorizontal } from 'lucide-react';
+import { Home, BookOpen, GitBranch, MessageSquare, StickyNote, Layers, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark, Inbox, Radar, SlidersHorizontal } from 'lucide-react';
 
 interface DockItem {
   id: string;
@@ -19,6 +19,7 @@ const DOCK_ITEMS: DockItem[] = [
   { id: 'pipeline', label: 'Pipeline', icon: LayoutDashboard, href: '/pipeline', color: '#4f46e5', bgColor: 'rgba(79,70,229,0.12)' },
   { id: 'leads', label: 'Scout', icon: Radar, href: '/leads', color: '#0d9488', bgColor: 'rgba(13,148,136,0.12)' },
   { id: 'thesis', label: 'Thesis', icon: SlidersHorizontal, href: '/thesis', color: '#7c3aed', bgColor: 'rgba(124,58,237,0.12)' },
+  { id: 'apply', label: 'Apply', icon: Inbox, href: '/apply', color: '#d97706', bgColor: 'rgba(217,119,6,0.12)' },
 ];
 
 const MAGNIFICATION = 2.2;

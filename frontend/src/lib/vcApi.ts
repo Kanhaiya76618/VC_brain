@@ -100,10 +100,23 @@ export interface FounderScoreSnapshot {
   components: Record<string, { value: number; weight: number; evidence_count: number }>;
 }
 
+export interface CapabilitySprint {
+  sprint_id: string;
+  person_id: string;
+  blind_id: string;
+  track: 'technical' | 'product' | 'operator';
+  components: Record<string, { score: number; max: number; note: string }>;
+  total: number;
+  rubric_version: string;
+  simulated: boolean;
+  scored_at: string;
+}
+
 export interface PersonView {
   person_id: string;
   canonical_name: string;
   founder_score: FounderScoreSnapshot;
+  sprints: CapabilitySprint[];
 }
 
 export interface StageTransition {
@@ -346,4 +359,12 @@ export function approveOutreach(draftId: string): Promise<{ draft: OutreachDraft
 
 export function sendOutreach(draftId: string, toEmail: string): Promise<{ id: string | null }> {
   return request(`/api/vc/outreach/${draftId}/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ toEmail }) });
+}
+
+export function applyInbound(input: { companyName: string; domain?: string; deckText: string }): Promise<{ opportunity_id: string }> {
+  return request('/api/vc/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+}
+
+export function runCapabilitySprint(personId: string): Promise<{ sprint: CapabilitySprint }> {
+  return request('/api/vc/sprint', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ personId }) });
 }

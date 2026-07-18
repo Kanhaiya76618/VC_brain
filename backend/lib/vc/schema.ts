@@ -373,3 +373,24 @@ export interface RoutingDecision {
   proposed_check: string | null;
   decided_at: string;
 }
+
+// Blind cold-start assessment: scored under a random ID with no school,
+// employer, network or follower data visible to the evaluator. Results enter
+// the graph as dated evidence, comparable with public-footprint evidence.
+export interface CapabilitySprint {
+  sprint_id: string;
+  person_id: string;
+  blind_id: string; // what the evaluator saw instead of an identity
+  track: 'technical' | 'product' | 'operator';
+  components: {
+    problem_investigation: { score: number; max: 30; note: string };
+    work_sample: { score: number; max: 35; note: string };
+    evidence_calibration: { score: number; max: 20; note: string };
+    collaboration_simulation: { score: number; max: 15; note: string };
+  };
+  total: number; // 0-100
+  rubric_version: string;
+  simulated: boolean; // demo-mode sprints are labeled, like all synthetic data
+  scored_at: string;
+  evidence_claim_id: string;
+}

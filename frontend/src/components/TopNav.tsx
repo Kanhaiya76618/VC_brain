@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, FileText, Search, Command, Bell, ChevronDown, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark, Radar, SlidersHorizontal } from 'lucide-react';
+import { Home, BookOpen, FileText, Search, Command, Bell, ChevronDown, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark, Inbox, Radar, SlidersHorizontal } from 'lucide-react';
 import SpotlightSearch from './SpotlightSearch';
 import StatusBadge from './StatusBadge';
 import Icon from '@/components/ui/AppIcon';
@@ -50,6 +50,7 @@ const NAV_ITEMS = [
   { href: '/pipeline', label: 'Pipeline', icon: LayoutDashboard },
   { href: '/leads', label: 'Scout', icon: Radar },
   { href: '/thesis', label: 'Thesis', icon: SlidersHorizontal },
+  { href: '/apply', label: 'Apply', icon: Inbox },
 ];
 
 export default function TopNav({ topic = 'Deal pipeline', agentStatus = 'idle' }: TopNavProps) {

@@ -29,10 +29,12 @@ import {
   fmtDuration,
   getOpportunity,
   getTrace,
+  runCapabilitySprint,
   type AxisScore,
   type Claim,
   type Contradiction,
   type OpportunityView,
+  type PersonView,
   type TraceEvent,
 } from '@/lib/vcApi';
 
@@ -228,6 +230,70 @@ function ContradictionCard({ c, claims }: { c: Contradiction; claims: Claim[] })
           Possible reconciliation (flag retained): {c.llm_reconciliation_note}
         </p>
       )}
+    </div>
+  );
+}
+
+function SprintPanel({ person, onDone }: { person: PersonView; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const sprint = person.sprints[person.sprints.length - 1];
+
+  if (sprint) {
+    return (
+      <div className="rounded-xl px-3 py-2.5 mt-3" style={{ background: 'rgba(13,148,136,0.06)', border: '1px solid rgba(13,148,136,0.15)' }}>
+        <div className="flex items-center justify-between flex-wrap gap-1">
+          <p className="text-[10px] font-mono font-bold" style={{ color: '#0d9488' }}>
+            BLIND CAPABILITY SPRINT · {sprint.blind_id}
+          </p>
+          <p className="text-[9px] font-mono text-muted-foreground">
+            {sprint.simulated ? 'SIMULATED DEMO · ' : ''}{sprint.rubric_version}
+          </p>
+        </div>
+        <p className="text-sm font-bold text-foreground mt-1">{sprint.total} / 100</p>
+        <div className="mt-1.5 space-y-1">
+          {Object.entries(sprint.components).map(([name, c]) => (
+            <div key={name} className="text-[10px]">
+              <span className="font-semibold text-foreground">{name.replace(/_/g, ' ')}</span>{' '}
+              <span className="font-mono text-muted-foreground">{c.score}/{c.max}</span>
+              <span className="text-muted-foreground"> — {c.note}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[9px] text-muted-foreground mt-1.5">
+          Scored under a random ID — no school, employer, network or follower data visible to the evaluator.
+        </p>
+      </div>
+    );
+  }
+
+  if (person.founder_score.coverage >= 0.5) return null;
+
+  return (
+    <div className="mt-3">
+      {error && <p className="text-[10px] mb-1" style={{ color: '#dc2626' }}>{error}</p>}
+      <button
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await runCapabilitySprint(person.person_id);
+            onDone();
+          } catch (reason) {
+            setError(reason instanceof Error ? reason.message : String(reason));
+          } finally {
+            setBusy(false);
+          }
+        }}
+        disabled={busy}
+        className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold disabled:opacity-50"
+        style={{ color: '#0d9488', background: 'rgba(13,148,136,0.08)', border: '1px dashed rgba(13,148,136,0.35)' }}
+      >
+        {busy ? 'Scoring blind…' : 'Cold start? Run blind Capability Sprint (demo)'}
+      </button>
+      <p className="text-[9px] text-muted-foreground mt-1">
+        Opt-in equalizer for founders with no public footprint — evidence from work, not networks.
+      </p>
     </div>
   );
 }
@@ -593,6 +659,7 @@ export default function OpportunityPage() {
                     </p>
                   )}
                 </div>
+                <SprintPanel person={p} onDone={refresh} />
               </div>
             );
           })}

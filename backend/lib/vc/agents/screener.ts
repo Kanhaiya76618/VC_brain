@@ -3,6 +3,7 @@ import { append, id, now, where } from '../store';
 import { latestAssessment } from '../cartographer';
 import { latestContradictions } from './adjudicator';
 import { founderSnapshot, isBannedPredicate } from './founderScore';
+import { activeThesis } from '../thesis';
 import { trace } from '../trace';
 import type {
   Axis,
@@ -242,12 +243,19 @@ export function routeDecision(
     rule = 'No matrix row matched (insufficient scores or mid-band) → default to evidence request.';
   }
 
+  // The challenge's unit of action is a $100K check in 24 hours; clamp it to
+  // the active thesis range so a configured fund overrides the default.
+  const thesis = activeThesis();
+  const check = Math.min(Math.max(100_000, thesis.check_size.min), thesis.check_size.max);
   const decision = append<RoutingDecision>('routing_decisions', {
     routing_id: id('rte'),
     opportunity_id: opportunityId,
     route,
     matrix_rule: rule,
-    proposed_check: route === 'advance' ? 'Propose check within active thesis range' : null,
+    proposed_check:
+      route === 'advance'
+        ? `Propose $${check.toLocaleString('en-US')} initial check (within "${thesis.name}" range $${thesis.check_size.min.toLocaleString('en-US')}–$${thesis.check_size.max.toLocaleString('en-US')}), subject to human sign-off`
+        : null,
     decided_at: now(),
   });
   trace({

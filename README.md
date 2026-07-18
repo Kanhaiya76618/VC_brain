@@ -51,6 +51,8 @@ flowchart TB
 
 **Founder Score** is persistent and person-scoped (stable external identities, e.g. a GitHub ID, followed across companies — the demo shows the same founder surfacing in two leads with one shared score). Cold start = neutral prior 50 with low coverage; missing public data is missing, never adverse. Banned as features under any name: school prestige, employer brand, follower counts, network size, location, age, gender, ethnicity, inferred personality — stripped before any scorer sees the input.
 
+**Cold start is a headline feature, not an afterthought**: a founder below 0.50 evidence coverage can opt into a **blind Capability Sprint** — scored under a random ID with no school/employer/network data visible to the evaluator (problem investigation 30 · work sample 35 · evidence calibration 20 · collaboration 15). Results enter the evidence graph through the same event mechanism as public artifacts, so sprint-evidenced and GitHub-evidenced founders are directly comparable. Design decisions and every citation behind them are documented and independently verified in [RESEARCH.md](RESEARCH.md).
+
 ## Running locally
 
 Backend (port 4029):
@@ -83,6 +85,8 @@ Backend `.env` (see `.env.example`): `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL
 6. **Thesis** (`/thesis`) — change the thesis to *industrial software / London / seed* and save: the Scout ranking flips live, with matched/unmatched criteria shown per lead. Evidence is never rewritten — only the lens changes.
 7. **Compound query** (same page) — run `technical founder, Berlin, AI infra, enterprise traction, no prior VC backing, top-tier accelerator`: one pass over the graph resolves all six clauses, each match citing the exact claim and source artifact; near-misses list which clauses are missing.
 8. **Promote a lead** — one click moves it into the same pipeline as the inbound deal: one funnel, two entry points.
+9. **Apply** (`/apply`) — the inbound minimum bar from the brief: company name + pasted deck. The deck becomes real extracted claims and enters the same funnel. Submit a first-time founder with no footprint to see the cold-start path.
+10. **Blind Capability Sprint** — on the applicant's founder card ("not enough evidence", coverage 0), run the sprint: score appears under a random blind ID, four components gain evidence, coverage reaches 0.50, and the Founder Score moves from "not enough evidence" to a number with an honest wide band.
 
 ## Non-negotiables (and where they live)
 

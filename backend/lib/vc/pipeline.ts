@@ -22,6 +22,7 @@ import { extractClaims } from './agents/extractor';
 import { validateClaims, validationsForClaim } from './agents/validator';
 import { adjudicate, assessClaim, latestContradictions } from './agents/adjudicator';
 import { deriveFounderEvents, founderSnapshot } from './agents/founderScore';
+import { sprintsForPerson } from './agents/capabilitySprint';
 import { latestAxisScores, routeDecision, scoreAllAxes } from './agents/screener';
 import { buildMemo, latestMemo } from './agents/memoWriter';
 import { DRIFTLOCK_SITE, deckAsText } from './seed/driftlock';
@@ -156,7 +157,11 @@ export function opportunityView(opportunityId: string) {
     company,
     stage: currentStage(opportunityId),
     transitions: transitionsFor(opportunityId),
-    persons: persons.map((p) => ({ ...p, founder_score: founderSnapshot(p.person_id) })),
+    persons: persons.map((p) => ({
+      ...p,
+      founder_score: founderSnapshot(p.person_id),
+      sprints: sprintsForPerson(p.person_id),
+    })),
     claims: claims.map((c) => ({
       ...c,
       assessment: latestAssessment(c.claim_id) ?? null,

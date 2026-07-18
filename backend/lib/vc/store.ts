@@ -25,6 +25,7 @@ export type TableName =
   | 'leads'
   | 'scout_signals'
   | 'outreach_drafts'
+  | 'capability_sprints'
   | 'memos'
   | 'routing_decisions';
 
@@ -48,6 +49,7 @@ const ALL_TABLES: TableName[] = [
   'leads',
   'scout_signals',
   'outreach_drafts',
+  'capability_sprints',
   'memos',
   'routing_decisions',
 ];
