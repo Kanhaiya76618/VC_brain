@@ -69,7 +69,7 @@ cd frontend && npm install && npm run dev
 
 The frontend proxies `/api/*` to the backend (`BACKEND_URL`, default `http://localhost:4029`).
 
-Backend `.env` (see `.env.example`): `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` (any OpenAI-compatible endpoint; calls run at temperature 0 with retry/backoff), optional `LLM_MODEL_HEAVY`, optional `GITHUB_TOKEN` (raises the live Scout rate limit), `RESEND_API_KEY` + `RESEND_FROM_ADDRESS` for human-approved outreach sends.
+Backend `.env` (see `.env.example`): `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` (any OpenAI-compatible endpoint; calls run at temperature 0 with retry/backoff and a 90s request timeout), optional `LLM_FALLBACK_*` (an OpenAI-compatible fallback — e.g. Groq — engaged only after primary retries are exhausted), optional `LLM_MODEL_HEAVY`, optional `GITHUB_TOKEN` (raises the live Scout rate limit), `RESEND_API_KEY` + `RESEND_FROM_ADDRESS` for human-approved outreach sends.
 
 ## Demo script (~5 minutes)
 
@@ -79,7 +79,7 @@ Backend `.env` (see `.env.example`): `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL
    - claims a **$50B TAM** where bottom-up accounts × ACV lands near **$750M** — HARD market contradiction;
    - claims an **"ex-Google engineer"** while the company site says **contractor via staffing agency** — identity contradiction;
    - bonus: ARR claimed while the pricing page says pilots are free — scope confusion.
-3. **Opportunity view** — three separate axis bars with coverage + uncertainty bands (an axis under 0.50 coverage honestly reads "not enough evidence"), the preserved contradiction cards with both quotes side by side, per-claim trust math, four timestamps on every claim, the HOLD banner, the memo with expandable evidence chips, hypotheses with falsifiers, "not disclosed" flags, PDF export, and the full agentic trace.
+3. **Opportunity view** — three separate axis bars with coverage + uncertainty bands (an axis under 0.50 coverage honestly reads "not enough evidence"), the preserved contradiction cards with both quotes side by side, per-claim trust math, four timestamps on every claim, the HOLD banner, the memo with expandable evidence chips, hypotheses with falsifiers, "not disclosed" flags, and the full agentic trace. Two PDF exports: the **memo** (the argument) and the **dossier** (the complete evidence record — every claim with trust math and timestamps, contradictions, axes with subscore rationales, founder scores + sprint, timeline, trace).
 4. **Scout** (`/leads`) — **Seed synthetic Scout demo** (labeled) or **Run bounded live scan** (real GitHub/HN/arXiv). Each lead card answers "why did this surface now?" in one sentence, shows all five formation conditions with evidence references, and is labeled REACH-OUT CANDIDATE — never an auto-investment. Note the same founder appears in both demo leads with one persistent Founder-memory score.
 5. **Activator** — on a lead card, draft outreach: it cites the specific artifacts that surfaced the lead (the Show HN, the release cadence, the paper). It is a **draft**; the send button only exists after an explicit human approval, and the API refuses anything else.
 6. **Thesis** (`/thesis`) — change the thesis to *industrial software / London / seed* and save: the Scout ranking flips live, with matched/unmatched criteria shown per lead. Evidence is never rewritten — only the lens changes.

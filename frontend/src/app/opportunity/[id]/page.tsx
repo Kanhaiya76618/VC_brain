@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import {
+  downloadDossierPdf,
   downloadMemoPdf,
   fmtDuration,
   getOpportunity,
@@ -446,16 +447,17 @@ export default function OpportunityPage() {
     }
   };
 
-  const handlePdf = async () => {
+  const download = async (kind: 'memo' | 'dossier') => {
     if (!params?.id) return;
-    const blob = await downloadMemoPdf(params.id);
+    const blob = kind === 'memo' ? await downloadMemoPdf(params.id) : await downloadDossierPdf(params.id);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'vcbrain-memo.pdf';
+    a.download = `vcbrain-${kind}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
   };
+  const handlePdf = () => download('memo');
 
   if (error) {
     return (
@@ -523,11 +525,20 @@ export default function OpportunityPage() {
               <FlaskConical size={10} /> SYNTHETIC DATA
             </span>
           )}
-          {elapsed !== null && (
-            <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground ml-auto">
-              <Clock size={10} /> first signal → {lastTransition.to}: {fmtDuration(elapsed)}
-            </span>
-          )}
+          <span className="flex items-center gap-2 ml-auto">
+            {elapsed !== null && (
+              <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
+                <Clock size={10} /> first signal → {lastTransition.to}: {fmtDuration(elapsed)}
+              </span>
+            )}
+            <button
+              onClick={() => download('dossier')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg glass-subtle text-[11px] font-semibold text-foreground hover:bg-white/80 transition-colors"
+              title="Full evidence record: every claim with trust math and timestamps, contradictions, axes, founders, trace"
+            >
+              <Download size={11} /> Dossier PDF
+            </button>
+          </span>
         </div>
 
         {/* Routing banner */}

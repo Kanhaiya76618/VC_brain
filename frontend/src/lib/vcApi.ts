@@ -304,6 +304,16 @@ export async function downloadMemoPdf(opportunityId: string): Promise<Blob> {
   return res.blob();
 }
 
+export async function downloadDossierPdf(opportunityId: string): Promise<Blob> {
+  const res = await fetch('/api/vc/dossier/pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ opportunityId }),
+  });
+  if (!res.ok) throw new Error(`Dossier export failed (${res.status})`);
+  return res.blob();
+}
+
 export function fmtDuration(ms: number | null): string {
   if (ms === null) return '—';
   const hours = ms / 3600000;
