@@ -24,6 +24,7 @@ async function chatOnce(
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
+      temperature: 0,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },

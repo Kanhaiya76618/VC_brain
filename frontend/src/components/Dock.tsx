@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, GitBranch, MessageSquare, StickyNote, Layers, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark } from 'lucide-react';
+import { Home, BookOpen, GitBranch, MessageSquare, StickyNote, Layers, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark, Radar, SlidersHorizontal } from 'lucide-react';
 
 interface DockItem {
   id: string;
@@ -16,16 +16,9 @@ interface DockItem {
 
 const DOCK_ITEMS: DockItem[] = [
   { id: 'home', label: 'Home', icon: Home, href: '/', color: '#4f46e5', bgColor: 'rgba(79,70,229,0.12)' },
-  { id: 'library', label: 'Library', icon: BookOpen, href: '/paper-reader', color: '#0d9488', bgColor: 'rgba(13,148,136,0.12)' },
-  { id: 'curriculum', label: 'Curriculum', icon: Layers, href: '/curriculum-view', color: '#7c3aed', bgColor: 'rgba(124,58,237,0.12)' },
-  { id: 'graph', label: 'Knowledge Graph', icon: GitBranch, href: '/curriculum-view#graph', color: '#d97706', bgColor: 'rgba(217,119,6,0.12)' },
-  { id: 'critic', label: 'Critic', icon: MessageSquare, href: '/curriculum-view#critique', color: '#dc2626', bgColor: 'rgba(220,38,38,0.12)' },
-  { id: 'notes', label: 'Notes', icon: StickyNote, href: '/paper-reader#notes', color: '#6e6e73', bgColor: 'rgba(110,110,115,0.12)' },
-  { id: 'preflight', label: 'PreFlight', icon: ClipboardCheck, href: '/preflight', color: '#0d9488', bgColor: 'rgba(13,148,136,0.12)' },
-  { id: 'archive', label: 'Archive', icon: FlaskConical, href: '/archive', color: '#d97706', bgColor: 'rgba(217,119,6,0.12)' },
-  { id: 'reviewer', label: 'Review', icon: Glasses, href: '/reviewer', color: '#7c3aed', bgColor: 'rgba(124,58,237,0.12)' },
-  { id: 'grantcraft', label: 'Propose', icon: Landmark, href: '/grantcraft', color: '#4f46e5', bgColor: 'rgba(79,70,229,0.12)' },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', color: '#4f46e5', bgColor: 'rgba(79,70,229,0.12)' },
+  { id: 'pipeline', label: 'Pipeline', icon: LayoutDashboard, href: '/pipeline', color: '#4f46e5', bgColor: 'rgba(79,70,229,0.12)' },
+  { id: 'leads', label: 'Scout', icon: Radar, href: '/leads', color: '#0d9488', bgColor: 'rgba(13,148,136,0.12)' },
+  { id: 'thesis', label: 'Thesis', icon: SlidersHorizontal, href: '/thesis', color: '#7c3aed', bgColor: 'rgba(124,58,237,0.12)' },
 ];
 
 const MAGNIFICATION = 2.2;

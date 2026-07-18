@@ -38,30 +38,81 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+// The extractor may be uncertain about a predicate, but it must never turn a
+// source's explicit ARR/MRR terminology into the other metric. This small
+// deterministic guard protects the revenue validator from a model-label error.
+function canonicalPredicate(raw: RawExtractedClaim): string {
+  const quote = raw.verbatim_quote.toLowerCase();
+  const saysMrr = /\bmrr\b|monthly recurring revenue/.test(quote) || /mrr/.test(raw.predicate);
+  if (/\barr\b|annual recurring revenue/.test(quote)) return 'arr';
+  if (saysMrr) {
+    // Per-cohort figures are different referents, not competing totals.
+    return /cohort/.test(quote) && !/total/.test(quote) ? 'cohort_mrr' : 'mrr_total';
+  }
+  // A full-time commitment statement is not an employment-history claim; keep
+  // it out of the role cross-check path.
+  if (/full[- ]?time/.test(quote) && ['role', 'prior_role'].includes(raw.predicate)) return 'commitment';
+  if (/\btam\b|total addressable market/.test(quote)) return 'tam';
+  if (raw.predicate === 'founded_on' && !/\bfounded\b/.test(quote)) {
+    return /target close/.test(quote) ? 'target_close' : 'dated_company_claim';
+  }
+  return raw.predicate;
+}
+
+// Whole-document extraction under-recalls badly on small models — they skim
+// and skip entire slides. Chunking by section keeps every slide in focus and
+// makes recall structural instead of prompt-dependent.
+function splitSections(doc: string): string[] {
+  const parts = doc.split(/\n\n(?=\[)/).filter((p) => p.trim());
+  return parts.length > 1 ? parts : [doc];
+}
+
+function chunkPairs(sections: string[]): string[] {
+  const chunks: string[] = [];
+  for (let i = 0; i < sections.length; i += 2) {
+    chunks.push(sections.slice(i, i + 2).join('\n\n'));
+  }
+  return chunks;
+}
+
 export async function extractClaims(
   artifact: Artifact,
   companyId: string,
   opportunityId: string
 ): Promise<Claim[]> {
   const doc = readPayload(artifact.payload_path);
-  const { claims: raw } = await callClaudeJSON<{ claims: RawExtractedClaim[] }>({
-    system: SYSTEM,
-    user: `DOCUMENT (${artifact.kind}, title: ${artifact.title})\n\n${doc}`,
-    maxTokens: 6000,
-    tier: 'heavy',
-  });
+  const raw: RawExtractedClaim[] = [];
+  for (const chunk of chunkPairs(splitSections(doc))) {
+    const result = await callClaudeJSON<{ claims: RawExtractedClaim[] }>({
+      system: SYSTEM,
+      user: `DOCUMENT EXCERPT (${artifact.kind}, title: ${artifact.title})\n\n${chunk}`,
+      maxTokens: 3200,
+      tier: 'heavy',
+    });
+    raw.push(...(result.claims ?? []));
+  }
 
   const docNorm = normalize(doc);
+  const seen = new Set<string>();
   const stored: Claim[] = [];
   const dropped: string[] = [];
 
-  for (const rc of raw ?? []) {
+  for (const rc of raw) {
     if (!rc.verbatim_quote || !docNorm.includes(normalize(rc.verbatim_quote))) {
       dropped.push(`${rc.predicate}: quote not found in document`);
       continue;
     }
+    const dedupeKey = `${rc.subject}:${rc.person_name ?? ''}:${canonicalPredicate(rc)}:${normalize(rc.verbatim_quote)}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
     const isPerson = rc.subject === 'person' && rc.person_name;
-    const subjectId = isPerson ? ensurePerson(rc.person_name!).person_id : companyId;
+    const subjectId = isPerson
+      ? ensurePerson(rc.person_name!, {
+          artifactId: artifact.artifact_id,
+          source: artifact.source,
+          companyId,
+        }).person_id
+      : companyId;
     const start = rc.period_start ?? rc.period_end;
     const end = rc.period_end ?? rc.period_start;
     const period = start && end ? { start, end } : null;
@@ -69,7 +120,7 @@ export async function extractClaims(
     const result = recordClaim({
       subject_type: isPerson ? 'person' : 'company',
       subject_id: subjectId,
-      predicate: rc.predicate,
+      predicate: canonicalPredicate(rc),
       value_json: rc.value,
       unit: rc.unit ?? null,
       period,
@@ -89,7 +140,7 @@ export async function extractClaims(
     });
 
     if (!result.ok) {
-      dropped.push(`${rc.predicate}: ${result.reason}`);
+      dropped.push(`${canonicalPredicate(rc)}: ${result.reason}`);
       continue;
     }
     stored.push(result.claim);

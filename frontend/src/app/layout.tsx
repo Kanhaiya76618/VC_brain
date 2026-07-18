@@ -9,9 +9,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'ResearchOS — AI-Native Research Operating System',
+  title: 'VC Brain — AI Operating System for Venture Capital',
   description:
-    'ResearchOS generates structured reading curricula, critiques coverage gaps, and maps your knowledge graph — turning any research topic into a navigable learning system.',
+    'VC Brain covers Sourcing, Screening, Diligence and Decision on one evidence graph: outbound formation detection, per-claim trust scores, preserved contradictions, and evidence-chipped memos.',
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },

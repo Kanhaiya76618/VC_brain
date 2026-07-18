@@ -10,6 +10,7 @@ import {
 import {
   companyById,
   createOpportunity,
+  currentPoint,
   currentStage,
   latestRouting,
   opportunityById,
@@ -51,6 +52,7 @@ export async function seedDriftlock(): Promise<{ opportunity_id: string }> {
 
   const company = ensureCompany('Driftlock AI', 'driftlock.ai');
   const deck = upsertArtifact({
+    company_id: company.company_id,
     source: 'deck',
     kind: 'pitch_deck',
     url: null,
@@ -61,6 +63,7 @@ export async function seedDriftlock(): Promise<{ opportunity_id: string }> {
     stub: false,
   });
   const site = upsertArtifact({
+    company_id: company.company_id,
     source: 'website',
     kind: 'website_snapshot',
     url: 'https://driftlock.ai',
@@ -69,6 +72,18 @@ export async function seedDriftlock(): Promise<{ opportunity_id: string }> {
     published_at: '2026-07-10T00:00:00.000Z',
     synthetic: true,
     stub: false,
+  });
+  upsertArtifact({
+    company_id: company.company_id,
+    source: 'market_benchmark_stub',
+    kind: 'market_benchmark',
+    url: null,
+    title: 'Independent market benchmark (synthetic demo)',
+    payload:
+      'Synthetic independent diligence benchmark. Eligible target accounts: 15,000. Annual contract value: $50,000. Bottom-up TAM: $750,000,000. This benchmark is seeded solely to demonstrate a transparent market-size contradiction.',
+    published_at: '2026-07-12T00:00:00.000Z',
+    synthetic: true,
+    stub: true,
   });
 
   const opp = createOpportunity(company.company_id, 'inbound', hoursAgo(22));
@@ -84,7 +99,12 @@ export async function runDiligence(opportunityId: string): Promise<void> {
   const opp = opportunityById(opportunityId);
   if (!opp) throw new Error(`Unknown opportunity: ${opportunityId}`);
 
-  transition(opportunityId, 'screened', 'system');
+  if (currentPoint(opportunityId) === 'decision') {
+    throw new Error('This opportunity already has a decision. Ingest a new evidence event before re-running diligence.');
+  }
+  if (currentPoint(opportunityId) === 'ingested') {
+    transition(opportunityId, 'screened', 'system');
+  }
 
   let claims = collectClaims(opportunityId);
   await validateClaims(claims, opportunityId);
@@ -101,7 +121,9 @@ export async function runDiligence(opportunityId: string): Promise<void> {
     deriveFounderEvents(personId, claimsForSubject(personId));
   }
 
-  transition(opportunityId, 'diligence', 'system');
+  if (currentPoint(opportunityId) === 'screened') {
+    transition(opportunityId, 'diligence', 'system');
+  }
 
   const personIds = relatedPersonIds(opp.company_id);
   const primaryFounder =
@@ -111,9 +133,11 @@ export async function runDiligence(opportunityId: string): Promise<void> {
 
   const axes = await scoreAllAxes(claims, opportunityId, primaryFounder);
   await buildMemo(opportunityId, claims);
-  routeDecision(opportunityId, axes);
+  routeDecision(opportunityId, axes, claims);
 
-  transition(opportunityId, 'decision', 'system');
+  if (currentPoint(opportunityId) === 'diligence') {
+    transition(opportunityId, 'decision', 'system');
+  }
 }
 
 export function opportunityView(opportunityId: string) {

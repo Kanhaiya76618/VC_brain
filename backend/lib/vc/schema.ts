@@ -17,6 +17,7 @@ export type Source =
   | 'website'
   | 'transcript'
   | 'crunchbase_stub'
+  | 'market_benchmark_stub'
   | 'derived';
 
 export interface Person {
@@ -39,7 +40,7 @@ export interface ExternalIdentity {
   external_id: string;
   url: string | null;
   handle: string | null;
-  match_basis: 'strong_key' | 'auto_merge' | 'human_merge';
+  match_basis: 'strong_key' | 'document_anchor' | 'auto_merge' | 'human_merge';
 }
 
 export type ArtifactKind =
@@ -51,10 +52,12 @@ export type ArtifactKind =
   | 'pitch_deck'
   | 'website_snapshot'
   | 'transcript'
-  | 'funding_stub';
+  | 'funding_stub'
+  | 'market_benchmark';
 
 export interface Artifact {
   artifact_id: string;
+  company_id: string | null; // scoped when the artifact is known to concern one company
   source: Source;
   kind: ArtifactKind;
   url: string | null;
@@ -301,6 +304,30 @@ export interface Lead {
     edges: { from: string; to: string; via_artifact: string }[];
   };
   label: 'reach_out_candidate';
+  profile: {
+    sectors: string[];
+    stage: string;
+    geography: string | null;
+    check_size_target: number | null;
+    summary: string;
+  };
+}
+
+// A Scout signal is the typed, inspectable input to the formation detector.
+// It deliberately stores observed facts rather than a model's interpretation.
+export interface ScoutSignal {
+  signal_id: string;
+  company_id: string | null;
+  artifact_id: string;
+  source: 'github' | 'hn' | 'arxiv';
+  kind: 'repo' | 'release' | 'commit_window' | 'show_hn' | 'paper';
+  observed_at: string;
+  event_at: string | null;
+  builder_external_ids: string[];
+  velocity: { recent_14d: number; prior_14d: number } | null;
+  tags: string[];
+  funding_status: 'none_confirmed' | 'confirmed' | 'unknown';
+  synthetic: boolean;
 }
 
 export interface OutreachDraft {

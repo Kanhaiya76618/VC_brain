@@ -33,6 +33,21 @@ function alreadyFlagged(a: string, b: string, rule: ContradictionRule): boolean 
   );
 }
 
+function samePeriod(a: Claim, b: Claim): boolean {
+  if (!a.period || !b.period) return !a.period && !b.period;
+  return a.period.start === b.period.start && a.period.end === b.period.end;
+}
+
+function hasPeriodMismatch(a: Claim, b: Claim): boolean {
+  return !!a.period && !!b.period && !samePeriod(a, b);
+}
+
+function asDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function flag(
   pair: [Claim, Claim],
   rule: ContradictionRule,
@@ -59,9 +74,14 @@ function flag(
 export function runDeterministicRules(claims: Claim[]): Contradiction[] {
   const found: Contradiction[] = [];
 
+  // Predicates whose instances describe different referents (one row per
+  // cohort, per milestone, …) — expected to differ, never a contradiction.
+  const PER_REFERENT_PREDICATES = new Set(['cohort_mrr']);
+
   const numericGroups = new Map<string, Claim[]>();
   for (const c of claims) {
     if (typeof c.value_json !== 'number') continue;
+    if (PER_REFERENT_PREDICATES.has(c.predicate)) continue;
     const key = `${c.subject_id}::${c.predicate}`;
     (numericGroups.get(key) ?? numericGroups.set(key, []).get(key)!).push(c);
   }
@@ -73,6 +93,19 @@ export function runDeterministicRules(claims: Claim[]): Contradiction[] {
         const b = group[j];
         if (a.unit && b.unit && a.unit !== b.unit) {
           const c = flag([a, b], 'unit_mismatch', 'material', `Same predicate stated in ${a.unit} vs ${b.unit}.`);
+          if (c) found.push(c);
+          continue;
+        }
+        // A derived claim (e.g. MRR×12 implied ARR) is annualized specifically
+        // to be comparable with its stated counterpart — the period guard must
+        // not shield that pair from the value check.
+        if (!a.derivation && !b.derivation && hasPeriodMismatch(a, b)) {
+          const c = flag(
+            [a, b],
+            'period_mismatch',
+            'minor',
+            `${a.predicate} is reported for ${a.period!.start}..${a.period!.end} and ${b.period!.start}..${b.period!.end}; the values are not directly comparable.`
+          );
           if (c) found.push(c);
           continue;
         }
@@ -93,6 +126,58 @@ export function runDeterministicRules(claims: Claim[]): Contradiction[] {
           );
           if (c) found.push(c);
         }
+      }
+    }
+  }
+
+  // A historical metric cannot precede the stated founding date. This is a
+  // deterministic temporal check, not an LLM interpretation.
+  for (const founded of claims.filter((c) => c.predicate === 'founded_on')) {
+    const foundedAt = asDate(founded.value_json);
+    if (!foundedAt) continue;
+    for (const candidate of claims) {
+      if (
+        candidate.claim_id === founded.claim_id ||
+        candidate.subject_id !== founded.subject_id ||
+        candidate.predicate === 'founded_on'
+      )
+        continue;
+      if (candidate.basis !== 'historical' || !candidate.period) continue;
+      if (new Date(candidate.period.end).getTime() < foundedAt.getTime()) {
+        const c = flag(
+          [founded, candidate],
+          'temporal_order',
+          'hard',
+          `${candidate.predicate} is reported as historical for ${candidate.period.start}..${candidate.period.end}, before the stated founding date ${String(founded.value_json)}.`
+        );
+        if (c) found.push(c);
+      }
+    }
+  }
+
+  // Different titles are usually compatible at a startup. Flag a role pair
+  // only when the employment nature itself conflicts (contract vs employee).
+  const roleClaims = claims.filter(
+    (c) => ['role', 'prior_role'].includes(c.predicate) && typeof c.value_json === 'string'
+  );
+  for (let i = 0; i < roleClaims.length; i++) {
+    for (let j = i + 1; j < roleClaims.length; j++) {
+      const a = roleClaims[i];
+      const b = roleClaims[j];
+      if (a.subject_id !== b.subject_id || a.predicate !== b.predicate) continue;
+      const av = String(a.value_json).toLowerCase();
+      const bv = String(b.value_json).toLowerCase();
+      const contractorVsEmployee =
+        (/contract(or)?|staffing|consultant/.test(av) && /employee|full[- ]?time|staff/.test(bv)) ||
+        (/contract(or)?|staffing|consultant/.test(bv) && /employee|full[- ]?time|staff/.test(av));
+      if (contractorVsEmployee) {
+        const c = flag(
+          [a, b],
+          'role_overlap',
+          'material',
+          `Role evidence conflicts on employment nature: "${a.source.verbatim_quote}" vs "${b.source.verbatim_quote}".`
+        );
+        if (c) found.push(c);
       }
     }
   }
@@ -305,7 +390,11 @@ export async function adjudicate(
     rule_version: RULE_VERSION,
   });
 
-  await annotateContradictions(fresh);
+  // Reconciliation prose is optional. The evidence and deterministic flag
+  // come first; avoiding an extra model call keeps the default demo lean.
+  if (process.env.VC_ANNOTATE_CONTRADICTIONS === 'true') {
+    await annotateContradictions(fresh);
+  }
 
   const assessments = claims.map((c) => assessClaim(c));
   trace({

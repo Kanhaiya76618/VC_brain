@@ -86,6 +86,18 @@ export function deriveFounderEvents(personId: string, personClaims: Claim[]): Fo
       const p = addEvent(personId, 'prior_outcomes', 0, claim.claim_id, 'Prior venture on record — neutral');
       if (p) events.push(p);
     }
+    if (claim.predicate === 'technical_work' && trust !== null && trust >= 60) {
+      const e = addEvent(personId, 'craft', 8, claim.claim_id, 'Source-verified technical work');
+      if (e) events.push(e);
+    }
+    if (claim.predicate === 'shipping_cadence' && trust !== null && trust >= 60) {
+      const e = addEvent(personId, 'learning_velocity', 7, claim.claim_id, 'Comparable-window shipping cadence');
+      if (e) events.push(e);
+    }
+    if (claim.predicate === 'customer_learning' && trust !== null && trust >= 60) {
+      const e = addEvent(personId, 'customer_learning', 6, claim.claim_id, 'Source-verified customer learning activity');
+      if (e) events.push(e);
+    }
 
     const identityHits = contradictions.filter(
       (c) => c.claim_ids.includes(claim.claim_id) && c.domain === 'identity' && c.status === 'open'

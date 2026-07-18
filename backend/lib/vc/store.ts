@@ -23,6 +23,7 @@ export type TableName =
   | 'axis_scores'
   | 'theses'
   | 'leads'
+  | 'scout_signals'
   | 'outreach_drafts'
   | 'memos'
   | 'routing_decisions';
@@ -45,6 +46,7 @@ const ALL_TABLES: TableName[] = [
   'axis_scores',
   'theses',
   'leads',
+  'scout_signals',
   'outreach_drafts',
   'memos',
   'routing_decisions',

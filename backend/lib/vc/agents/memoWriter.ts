@@ -69,7 +69,7 @@ export async function buildMemo(opportunityId: string, claims: Claim[]): Promise
         ? contradictions.map((c) => `- [${c.severity}] ${c.detail} (claims: ${c.claim_ids.join(', ')})`)
         : ['(none)']),
     ].join('\n'),
-    maxTokens: 4000,
+    maxTokens: 2000,
     tier: 'heavy',
   });
 

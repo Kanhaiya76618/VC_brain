@@ -63,7 +63,19 @@ export function transition(
   actor: 'system' | 'human',
   at?: string
 ): StageTransition {
+  const existing = transitionsFor(opportunityId);
   const from = currentPoint(opportunityId);
+  const fromIndex = ORDER.indexOf(from);
+  const toIndex = ORDER.indexOf(to);
+  if (toIndex < fromIndex) {
+    throw new Error(`Cannot move opportunity backward from ${from} to ${to}. Append a correction event instead.`);
+  }
+  if (toIndex === fromIndex && existing.length > 0) {
+    return existing[existing.length - 1];
+  }
+  if (toIndex !== fromIndex + 1) {
+    throw new Error(`Invalid stage transition ${from} → ${to}; transitions must follow the pipeline order.`);
+  }
   const t = append<StageTransition>('stage_transitions', {
     transition_id: id('stx'),
     opportunity_id: opportunityId,

@@ -120,7 +120,7 @@ async function scoreAxis(
     user: `AXIS: ${axis}\nSUBSCORES TO SCORE:\n${askable
       .map((s) => `- ${s.name} (weight ${s.weight}): ${s.hint}`)
       .join('\n')}\n\n${scorerInput(claims, axis)}`,
-    maxTokens: 2500,
+    maxTokens: 1200,
     tier: 'heavy',
   });
 
@@ -209,12 +209,19 @@ export function latestAxisScores(opportunityId: string): AxisScore[] {
 
 // The decision matrix routes on individual axis thresholds — never on any
 // blend — and a hard open contradiction overrides every score.
-export function routeDecision(opportunityId: string, axes: AxisScore[]): RoutingDecision {
+export function routeDecision(
+  opportunityId: string,
+  axes: AxisScore[],
+  claims: Claim[]
+): RoutingDecision {
   const founder = axes.find((a) => a.axis === 'founder')?.score ?? null;
   const idea = axes.find((a) => a.axis === 'idea_market')?.score ?? null;
   const market = axes.find((a) => a.axis === 'market');
 
-  const hardOpen = latestContradictions().filter((c) => c.severity === 'hard' && c.status === 'open');
+  const claimIds = new Set(claims.map((claim) => claim.claim_id));
+  const hardOpen = latestContradictions().filter(
+    (c) => c.severity === 'hard' && c.status === 'open' && c.claim_ids.some((claimId) => claimIds.has(claimId))
+  );
 
   let route: DecisionRoute;
   let rule: string;

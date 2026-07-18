@@ -1,6 +1,7 @@
 import { callClaudeJSON } from '../../llm';
 import { append, find, id, now, readPayload, where } from '../store';
-import { recordClaim } from '../cartographer';
+import { normalizeDomain, recordClaim } from '../cartographer';
+import { companyById, opportunityById } from '../orchestrator';
 import { trace } from '../trace';
 import type { Artifact, Claim, Validation, ValidationVerdict } from '../schema';
 
@@ -111,6 +112,35 @@ interface RoleCheck {
   note: string;
 }
 
+function companyMention(text: string): string | null {
+  const match = text.match(/\b(?:ex[-\s]?|at\s+|from\s+)([A-Z][A-Za-z0-9.&-]+)/);
+  return match?.[1] ?? null;
+}
+
+function deterministicRoleCheck(claim: Claim, siteText: string): RoleCheck | null {
+  const entity = companyMention(claim.source.verbatim_quote);
+  if (!entity) return null;
+  const matchingLine = siteText
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.toLowerCase().includes(entity.toLowerCase()));
+  if (!matchingLine) return null;
+
+  const claimed = claim.source.verbatim_quote.toLowerCase();
+  const source = matchingLine.toLowerCase();
+  const contractorMismatch =
+    /\b(contract|contractor|staffing|consultant)\b/.test(source) &&
+    !/\b(contract|contractor|staffing|consultant)\b/.test(claimed);
+  if (contractorMismatch) {
+    return {
+      verdict: 'partly_supported',
+      snippet: matchingLine,
+      note: `The independent source confirms work at ${entity} but describes a contract engagement, not the employment framing in the claim.`,
+    };
+  }
+  return null;
+}
+
 async function validateRole(claim: Claim, snapshots: Artifact[]): Promise<Validation> {
   if (snapshots.length === 0) {
     return saveValidation({
@@ -123,10 +153,21 @@ async function validateRole(claim: Claim, snapshots: Artifact[]): Promise<Valida
   }
   const site = snapshots[0];
   const siteText = readPayload(site.payload_path);
+  const deterministic = deterministicRoleCheck(claim, siteText);
+  if (deterministic) {
+    return saveValidation({
+      claim_id: claim.claim_id,
+      verdict: deterministic.verdict,
+      method: 'site_cross_check:employment_nature',
+      evidence: [{ artifact_id: site.artifact_id, url: site.url ?? undefined, snippet: deterministic.snippet }],
+      shown_calculation: deterministic.note,
+    });
+  }
   const result = await callClaudeJSON<RoleCheck>({
     system: `You verify a role/employment claim against an independent source document. Do not trust the claim; compare it strictly against the source.
 - snippet MUST be an exact substring of the source document that is the most relevant passage. If no relevant passage exists, verdict is "insufficient_evidence" and snippet is "".
 - "supported": the source states the same role and employment nature. "partly_supported": overlapping but weaker/different (e.g. contractor vs employee, shorter tenure). "contradicted": the source states something incompatible.
+- Compare like with like: a passage about a DIFFERENT company or a DIFFERENT time period than the claim describes cannot contradict it — that is "insufficient_evidence", not "contradicted".
 Respond ONLY with JSON: { "verdict": "supported"|"partly_supported"|"contradicted"|"insufficient_evidence", "snippet": string, "note": string }`,
     user: `CLAIM (from ${claim.source.locator}): "${claim.source.verbatim_quote}"\n\nSOURCE DOCUMENT (${site.title}):\n${siteText}`,
     maxTokens: 800,
@@ -144,31 +185,47 @@ Respond ONLY with JSON: { "verdict": "supported"|"partly_supported"|"contradicte
   });
 }
 
-interface BottomUpTam {
-  target_accounts: number;
-  acv_usd: number;
-  rationale: string;
+interface MarketBenchmark {
+  artifact: Artifact;
+  targetAccounts: number;
+  acvUsd: number;
+  snippet: string;
 }
 
-async function validateTam(claim: Claim, siblingClaims: Claim[]): Promise<Validation> {
-  const productContext = siblingClaims
-    .filter((c) => ['product_description', 'pricing_model', 'technology_claim'].includes(c.predicate))
-    .map((c) => `- ${c.source.verbatim_quote}`)
-    .join('\n');
+function parseMarketBenchmark(artifacts: Artifact[]): MarketBenchmark | null {
+  for (const artifact of artifacts) {
+    const text = readPayload(artifact.payload_path);
+    const accounts = text.match(/eligible target accounts:\s*([\d,]+)/i)?.[1];
+    const acv = text.match(/annual contract value:\s*\$([\d,]+)/i)?.[1];
+    if (accounts && acv) {
+      return {
+        artifact,
+        targetAccounts: Number(accounts.replace(/,/g, '')),
+        acvUsd: Number(acv.replace(/,/g, '')),
+        snippet: text,
+      };
+    }
+  }
+  return null;
+}
 
-  const est = await callClaudeJSON<BottomUpTam>({
-    system: `You run an INDEPENDENT bottom-up market sizing for a startup, from first principles: how many organizations could realistically buy this product (target_accounts) and at what annual contract value (acv_usd). Be conservative and concrete; state your reasoning in rationale. Do NOT anchor on any number the company claims.
-Respond ONLY with JSON: { "target_accounts": number, "acv_usd": number, "rationale": string }`,
-    user: `PRODUCT EVIDENCE:\n${productContext || '(none)'}\n\nThe company claims (do not anchor on it): "${claim.source.verbatim_quote}"`,
-    maxTokens: 800,
-    tier: 'heavy',
-  });
+function validateTam(claim: Claim, benchmarks: Artifact[]): Validation {
+  const benchmark = parseMarketBenchmark(benchmarks);
+  if (!benchmark) {
+    return saveValidation({
+      claim_id: claim.claim_id,
+      verdict: 'insufficient_evidence',
+      method: 'bottom_up_tam',
+      evidence: [],
+      shown_calculation: 'No independent market benchmark is available; the TAM claim is not verified.',
+    });
+  }
 
-  const bottomUp = est.target_accounts * est.acv_usd;
+  const bottomUp = benchmark.targetAccounts * benchmark.acvUsd;
   const claimed = claim.value_json as number;
   const ratio = claimed / Math.max(bottomUp, 1);
   const verdict: ValidationVerdict = ratio <= 2 ? 'supported' : ratio <= 5 ? 'partly_supported' : 'contradicted';
-  const calculation = `Bottom-up: ${est.target_accounts.toLocaleString('en-US')} target accounts × ${fmtUsd(est.acv_usd)} ACV = ${fmtUsd(bottomUp)}; stated TAM ${fmtUsd(claimed)} is ${ratio.toFixed(1)}× the bottom-up figure. ${est.rationale}`;
+  const calculation = `Bottom-up: ${benchmark.targetAccounts.toLocaleString('en-US')} target accounts × ${fmtUsd(benchmark.acvUsd)} ACV = ${fmtUsd(bottomUp)}; stated TAM ${fmtUsd(claimed)} is ${ratio.toFixed(1)}× the benchmark. ${benchmark.artifact.synthetic ? 'Benchmark is synthetic demo data.' : ''}`.trim();
 
   const derived = existingDerived(claim.subject_id, 'tam', 'bottom_up_accounts_x_acv')
     ? null
@@ -180,7 +237,11 @@ Respond ONLY with JSON: { "target_accounts": number, "acv_usd": number, "rationa
     unit: 'USD',
     period: claim.period,
     basis: 'historical',
-    source: claim.source,
+    source: {
+      artifact_id: benchmark.artifact.artifact_id,
+      locator: benchmark.artifact.title,
+      verbatim_quote: benchmark.snippet,
+    },
     derivation: {
       method: 'bottom_up_accounts_x_acv',
       from_claim_ids: [claim.claim_id],
@@ -201,8 +262,9 @@ Respond ONLY with JSON: { "target_accounts": number, "acv_usd": number, "rationa
     method: 'bottom_up_tam',
     evidence: [
       {
-        artifact_id: claim.source.artifact_id,
-        snippet: claim.source.verbatim_quote,
+        artifact_id: benchmark.artifact.artifact_id,
+        url: benchmark.artifact.url ?? undefined,
+        snippet: benchmark.snippet,
       },
     ],
     shown_calculation: calculation,
@@ -213,10 +275,21 @@ export async function validateClaims(
   claims: Claim[],
   opportunityId: string
 ): Promise<Validation[]> {
-  const snapshots = where<Artifact>(
-    'artifacts',
-    (a) => a.kind === 'website_snapshot'
-  );
+  const opportunity = opportunityById(opportunityId);
+  const company = opportunity ? companyById(opportunity.company_id) : null;
+  const companyDomain = company?.primary_domain ?? null;
+  const snapshots = companyDomain
+    ? where<Artifact>(
+        'artifacts',
+        (a) => a.kind === 'website_snapshot' && a.url !== null && normalizeDomain(a.url) === companyDomain
+      )
+    : [];
+  const benchmarks = company
+    ? where<Artifact>(
+        'artifacts',
+        (a) => a.kind === 'market_benchmark' && a.company_id === company.company_id
+      )
+    : [];
   const results: Validation[] = [];
 
   for (const claim of claims) {
@@ -228,7 +301,7 @@ export async function validateClaims(
     } else if (['prior_role', 'role', 'prior_venture'].includes(claim.predicate)) {
       v = await validateRole(claim, snapshots);
     } else if (claim.predicate === 'tam' && typeof claim.value_json === 'number') {
-      v = await validateTam(claim, claims);
+      v = validateTam(claim, benchmarks);
     }
     if (v) {
       results.push(v);

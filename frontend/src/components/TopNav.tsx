@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, FileText, Search, Command, Bell, ChevronDown, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark } from 'lucide-react';
+import { Home, BookOpen, FileText, Search, Command, Bell, ChevronDown, FlaskConical, LayoutDashboard, ClipboardCheck, Glasses, Landmark, Radar, SlidersHorizontal } from 'lucide-react';
 import SpotlightSearch from './SpotlightSearch';
 import StatusBadge from './StatusBadge';
 import Icon from '@/components/ui/AppIcon';
@@ -47,16 +47,12 @@ function HealthDot() {
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/curriculum-view', label: 'Curriculum', icon: BookOpen },
-  { href: '/paper-reader', label: 'Papers', icon: FileText },
-  { href: '/preflight', label: 'PreFlight', icon: ClipboardCheck },
-  { href: '/archive', label: 'Archive', icon: FlaskConical },
-  { href: '/reviewer', label: 'Review', icon: Glasses },
-  { href: '/grantcraft', label: 'Propose', icon: Landmark },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/pipeline', label: 'Pipeline', icon: LayoutDashboard },
+  { href: '/leads', label: 'Scout', icon: Radar },
+  { href: '/thesis', label: 'Thesis', icon: SlidersHorizontal },
 ];
 
-export default function TopNav({ topic = 'Attention Mechanisms', agentStatus = 'idle' }: TopNavProps) {
+export default function TopNav({ topic = 'Deal pipeline', agentStatus = 'idle' }: TopNavProps) {
   const pathname = usePathname();
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -87,7 +83,7 @@ export default function TopNav({ topic = 'Attention Mechanisms', agentStatus = '
       >
         <div className="flex items-center gap-3">
           {/* App name */}
-          <span className="text-sm font-semibold text-[#1d1d1f] tracking-tight">ResearchOS</span>
+          <span className="text-sm font-semibold text-[#1d1d1f] tracking-tight">VC Brain</span>
 
           {/* Nav items */}
           <nav className="hidden md:flex items-center gap-0.5 ml-2">
@@ -128,7 +124,7 @@ export default function TopNav({ topic = 'Attention Mechanisms', agentStatus = '
 
         {/* Center — breadcrumb */}
         <div className="flex-1 min-w-0 hidden lg:flex items-center justify-center gap-1.5 px-3 text-xs text-[#6e6e73]">
-          <span className="font-medium text-[#1d1d1f]">ResearchOS</span>
+          <span className="font-medium text-[#1d1d1f]">VC Brain</span>
           <ChevronDown size={10} className="rotate-[-90deg]" />
           <span className="text-[#4f46e5] font-medium truncate max-w-[200px]">{topic}</span>
         </div>
@@ -181,9 +177,9 @@ export default function TopNav({ topic = 'Attention Mechanisms', agentStatus = '
                     <p className="text-xs font-semibold text-[#1d1d1f]">Notifications</p>
                   </div>
                   {[
-                    { id: 'n1', text: 'Critique ready for "Transformer Survey"', time: '2m ago', dot: '#4f46e5' },
-                    { id: 'n2', text: 'New papers added to Diffusion Models', time: '18m ago', dot: '#0d9488' },
-                    { id: 'n3', text: 'Knowledge graph rebuilt — 47 nodes', time: '1h ago', dot: '#d97706' },
+                    { id: 'n1', text: 'Validator flagged an ARR contradiction on Driftlock AI', time: '2m ago', dot: '#dc2626' },
+                    { id: 'n2', text: 'Diligence memo ready — evidence chips attached', time: '18m ago', dot: '#0d9488' },
+                    { id: 'n3', text: 'Opportunity routed: HOLD for human review', time: '1h ago', dot: '#d97706' },
                   ].map((n) => (
                     <div key={n.id} className="px-3 py-2.5 hover:bg-black/4 cursor-pointer border-b border-black/4 last:border-0 flex items-start gap-2.5">
                       <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: n.dot }} />

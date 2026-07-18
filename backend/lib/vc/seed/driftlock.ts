@@ -4,6 +4,8 @@
 //      contractor engagement.
 //   3. Slide 7 claims a $50B TAM where a bottom-up computation lands near $750M.
 // Every artifact seeded here is flagged synthetic:true and rendered as such.
+// The independent market benchmark is deliberately a stub so the UI can
+// demonstrate evidence provenance without pretending that it is live data.
 
 export interface DeckSlide {
   slide: number;
@@ -20,12 +22,12 @@ export const DRIFTLOCK_DECK: DeckSlide[] = [
   {
     slide: 2,
     title: 'Problem',
-    text: 'Enterprises ship LLM features blind. Silent model drift breaks production workflows, and support teams burn thousands of hours a quarter triaging regressions nobody detected.',
+    text: 'Enterprises ship LLM features blind. Silent model drift breaks production workflows, and support teams burn thousands of hours a quarter triaging regressions nobody detected. In interviews with 27 ML platform teams between February and May 2026, teams reported spending 15 to 30 hours per week manually spot-checking LLM output quality. Current alternatives are manual spot-checking and generic APM tools that were not built for LLM behavior.',
   },
   {
     slide: 3,
     title: 'Product',
-    text: 'Drift detection SDK plus dashboard, installed in CI. Proprietary drift-detection models score every deployment against a behavioral baseline.',
+    text: 'Drift detection SDK plus dashboard, installed in CI. Proprietary drift-detection models score every deployment against a behavioral baseline. SDK v0.9 shipped in May 2026 and v1.0 shipped in June 2026; the SDK is deployed in the CI pipelines of all 11 design partners. The wedge customer is the ML platform lead at a 200 to 2,000 person software company already running LLM features in production.',
   },
   {
     slide: 4,
@@ -40,7 +42,7 @@ export const DRIFTLOCK_DECK: DeckSlide[] = [
   {
     slide: 6,
     title: 'Team',
-    text: 'Maya Chen, CTO — ex-Google engineer, six years on large-scale ML infrastructure. Jonas Petrov, CEO — second-time founder, previously built a developer-tools startup.',
+    text: 'Maya Chen, CTO — ex-Google engineer, six years on large-scale ML infrastructure. Jonas Petrov, CEO — second-time founder, previously built a developer-tools startup. Both founders have been full-time on Driftlock since January 2026 and have invested $60,000 of personal savings.',
   },
   {
     slide: 7,
