@@ -53,11 +53,23 @@ export async function callClaude(args: CallArgs): Promise<string> {
     throw new Error('LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL must be set');
   }
 
-  try {
-    const out = await chatOnce(baseUrl, apiKey, model, args);
-    lastUsedModel = model;
-    return out;
-  } catch (err) {
+  let lastErr: unknown;
+  for (const delayMs of [0, 2000, 6000]) {
+    if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+    try {
+      const out = await chatOnce(baseUrl, apiKey, model, args);
+      lastUsedModel = model;
+      return out;
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      // Permanent failures (auth, billing) should not burn retries.
+      if (/ 401 | 402 | 403 /.test(` ${msg} `)) break;
+      console.warn(`[llm] attempt failed, ${delayMs ? 'after backoff ' : ''}retrying: ${msg.slice(0, 120)}`);
+    }
+  }
+  {
+    const err = lastErr;
     const fbUrl = process.env.LLM_FALLBACK_BASE_URL;
     const fbKey = process.env.LLM_FALLBACK_API_KEY;
     const fbModel = process.env.LLM_FALLBACK_MODEL;
