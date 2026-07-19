@@ -2,42 +2,74 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Search, FileText, Layers, StickyNote, FolderOpen, ArrowRight } from 'lucide-react';
-import { MOCK_SEARCH_RESULTS, type SearchResult } from '@/lib/mock/data'; // TODO(mock): no backend endpoint provides this data yet
-import Icon from '@/components/ui/AppIcon';
-
+import { useRouter } from 'next/navigation';
+import { Search, FileText, Layers, Radar, ArrowRight } from 'lucide-react';
+import { getPipeline } from '@/lib/vcApi';
 
 interface SpotlightSearchProps {
   open: boolean;
   onClose: () => void;
 }
 
+interface SearchResult {
+  id: string;
+  type: 'page' | 'opportunity';
+  title: string;
+  subtitle: string;
+  href: string;
+}
+
+// Real destinations only: the VC Brain screens plus live opportunities
+// fetched from the evidence graph each time the palette opens.
+const PAGE_RESULTS: SearchResult[] = [
+  { id: 'p-pipeline', type: 'page', title: 'Pipeline', subtitle: 'Sourcing → Screening → Diligence → Decision', href: '/pipeline' },
+  { id: 'p-leads', type: 'page', title: 'Scout — formation detector', subtitle: 'outbound reach-out candidates', href: '/leads' },
+  { id: 'p-thesis', type: 'page', title: 'Thesis & graph query', subtitle: 'fund lens + compound evidence query', href: '/thesis' },
+  { id: 'p-apply', type: 'page', title: 'Apply', subtitle: 'inbound: deck + company name', href: '/apply' },
+];
+
 const TYPE_ICONS: Record<SearchResult['type'], React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>> = {
-  paper: FileText,
-  topic: Layers,
-  note: StickyNote,
-  workspace: FolderOpen,
+  page: Layers,
+  opportunity: FileText,
 };
 
 const TYPE_COLORS: Record<SearchResult['type'], string> = {
-  paper: '#4f46e5',
-  topic: '#0d9488',
-  note: '#d97706',
-  workspace: '#7c3aed',
+  page: '#4f46e5',
+  opportunity: '#0d9488',
 };
 
 export default function SpotlightSearch({ open, onClose }: SpotlightSearchProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [results, setResults] = useState<SearchResult[]>(PAGE_RESULTS);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!open) return;
+    getPipeline()
+      .then((v) =>
+        setResults([
+          ...PAGE_RESULTS,
+          ...v.opportunities.map((o) => ({
+            id: o.opportunity_id,
+            type: 'opportunity' as const,
+            title: o.company?.canonical_name ?? o.opportunity_id,
+            subtitle: `${o.entry_point} · stage: ${o.stage}${o.routing ? ` · ${o.routing.route.replace(/_/g, ' ')}` : ''}`,
+            href: `/opportunity/${o.opportunity_id}`,
+          })),
+        ])
+      )
+      .catch(() => setResults(PAGE_RESULTS));
+  }, [open]);
 
   const filtered = query.trim()
-    ? MOCK_SEARCH_RESULTS.filter(
+    ? results.filter(
         (r) =>
           r.title.toLowerCase().includes(query.toLowerCase()) ||
           r.subtitle.toLowerCase().includes(query.toLowerCase())
       )
-    : MOCK_SEARCH_RESULTS;
+    : results;
 
   useEffect(() => {
     if (open) {
@@ -59,10 +91,11 @@ export default function SpotlightSearch({ open, onClose }: SpotlightSearchProps)
         setSelectedIndex((i) => Math.max(i - 1, 0));
       }
       if (e.key === 'Enter' && filtered[selectedIndex]) {
+        router.push(filtered[selectedIndex].href);
         onClose();
       }
     },
-    [filtered, selectedIndex, onClose]
+    [filtered, selectedIndex, onClose, router]
   );
 
   useEffect(() => {
@@ -110,7 +143,7 @@ export default function SpotlightSearch({ open, onClose }: SpotlightSearchProps)
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search papers, topics, notes…"
+                  placeholder="Search screens and opportunities…"
                   className="flex-1 bg-transparent text-sm text-[#1d1d1f] placeholder-[#6e6e73] outline-none font-medium"
                   autoComplete="off"
                 />

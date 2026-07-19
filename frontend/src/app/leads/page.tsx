@@ -26,6 +26,83 @@ const CONDITION_LABELS: Record<string, string> = {
   e_no_prior_funding: 'No confirmed institutional funding',
 };
 
+// Color + short label per node type in the formation link graph. This is the
+// real graph that produced the lead — company at the centre, the independent
+// artifacts and identity-linked builders that corroborated it around it.
+const NODE_STYLE: Record<string, { color: string; label: string }> = {
+  company: { color: '#4f46e5', label: 'Company' },
+  builder: { color: '#dc2626', label: 'Builder' },
+  repo: { color: '#0d9488', label: 'GitHub repo' },
+  hn_post: { color: '#d97706', label: 'Show HN' },
+  arxiv_paper: { color: '#7c3aed', label: 'arXiv paper' },
+  funding_stub: { color: '#6e6e73', label: 'Funding (stub)' },
+  release: { color: '#0d9488', label: 'Release' },
+};
+
+function nodeStyle(type: string) {
+  return NODE_STYLE[type] ?? { color: '#6e6e73', label: type };
+}
+
+function LinkGraph({ graph }: { graph: ScoutLead['link_graph'] }) {
+  const W = 460;
+  const H = 260;
+  const cx = W / 2;
+  const cy = H / 2;
+  const center = graph.nodes.find((n) => n.type === 'company') ?? graph.nodes[0];
+  const others = graph.nodes.filter((n) => n.id !== center.id);
+
+  // Deterministic radial layout: company centred, everything else evenly
+  // spaced on a ring so the same lead always draws the same graph.
+  const pos: Record<string, { x: number; y: number }> = { [center.id]: { x: cx, y: cy } };
+  others.forEach((n, i) => {
+    const angle = (i / others.length) * Math.PI * 2 - Math.PI / 2;
+    pos[n.id] = { x: cx + Math.cos(angle) * 150, y: cy + Math.sin(angle) * 95 };
+  });
+
+  const usedTypes = [...new Set(graph.nodes.map((n) => n.type))];
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Formation link graph that produced this lead" style={{ maxWidth: 460 }}>
+        {graph.edges.map((e, i) => {
+          const a = pos[e.from];
+          const b = pos[e.to];
+          if (!a || !b) return null;
+          return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(79,70,229,0.25)" strokeWidth={1} />;
+        })}
+        {graph.nodes.map((n) => {
+          const p = pos[n.id];
+          if (!p) return null;
+          const s = nodeStyle(n.type);
+          const isCenter = n.id === center.id;
+          const r = isCenter ? 9 : 6;
+          return (
+            <g key={n.id}>
+              <circle cx={p.x} cy={p.y} r={r} fill={s.color} stroke="#fff" strokeWidth={1.5} />
+              <text
+                x={p.x}
+                y={p.y - r - 4}
+                textAnchor="middle"
+                style={{ fontSize: 9, fontFamily: 'var(--font-mono, monospace)', fill: 'var(--foreground)' }}
+              >
+                {n.label.length > 22 ? `${n.label.slice(0, 22)}…` : n.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+        {usedTypes.map((t) => (
+          <span key={t} className="inline-flex items-center gap-1 text-[9px] text-muted-foreground">
+            <span className="w-2 h-2 rounded-full" style={{ background: nodeStyle(t).color }} />
+            {nodeStyle(t).label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Condition({ label, passed, note, refs }: { label: string; passed: boolean; note: string; refs: string[] }) {
   const IconCmp = passed ? CheckCircle2 : XCircle;
   return (
@@ -182,10 +259,19 @@ function LeadCard({ lead, onPromote, busy }: { lead: ScoutLead; onPromote: (id: 
         </div>
       </div>
 
+      <div className="glass-subtle rounded-xl p-3 mt-3">
+        <div className="flex items-center justify-between mb-1">
+          <p className="eyebrow">Link graph that produced this lead</p>
+          <p className="inline-flex items-center gap-1.5 text-[9px] font-mono text-muted-foreground">
+            <GitFork size={10} /> {lead.link_graph.nodes.length} nodes · {lead.link_graph.edges.length} evidence edges
+          </p>
+        </div>
+        <LinkGraph graph={lead.link_graph} />
+      </div>
+
       <OutreachPanel leadId={lead.lead_id} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-        <p className="inline-flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground"><GitFork size={11} /> {lead.link_graph.nodes.length} graph nodes · {lead.link_graph.edges.length} evidence edges</p>
+      <div className="flex flex-wrap items-center justify-end gap-3 mt-4">
         <button
           onClick={() => onPromote(lead.lead_id)}
           disabled={busy}

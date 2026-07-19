@@ -3,8 +3,6 @@ import React from 'react';
 
 import TopNav from './TopNav';
 import Dock from './Dock';
-import HelpAssistant from './HelpAssistant';
-import StudyTools from './StudyTools';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -58,12 +56,6 @@ export default function AppShell({ children, topic, agentStatus = 'idle', bounci
 
       {/* Bottom Dock */}
       <Dock bouncingItem={bouncingDockItem} />
-
-      {/* Help assistant */}
-      <HelpAssistant />
-
-      {/* Study tools */}
-      <StudyTools />
     </div>
   );
 }
