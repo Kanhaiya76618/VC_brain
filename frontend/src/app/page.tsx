@@ -1,7 +1,7 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Radar, SlidersHorizontal, Inbox, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, Radar, SlidersHorizontal, Inbox, ArrowRight, BookOpen, GitBranch, MessageCircle, Search } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 
 const ENTRY_POINTS = [
@@ -36,6 +36,18 @@ const ENTRY_POINTS = [
 ];
 
 export default function HomePage() {
+  const [sourceQuery, setSourceQuery] = useState('');
+  const sourceUrl = (source: 'github' | 'arxiv' | 'hn') => {
+    const query = encodeURIComponent(sourceQuery.trim());
+    if (!query) return;
+    const urls = {
+      github: `https://github.com/search?q=${query}&type=repositories`,
+      arxiv: `https://arxiv.org/search/?query=${query}&searchtype=all`,
+      hn: `https://hn.algolia.com/?q=${query}`,
+    };
+    window.open(urls[source], '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <AppShell topic="Home" agentStatus="idle">
       <div className="relative min-h-full">
@@ -52,6 +64,37 @@ export default function HomePage() {
             contradiction, and score three independent axes — never averaged. The system recommends and shows
             its work; a human decides.
           </p>
+
+          <section className="glass rounded-2xl p-5 mb-5" aria-labelledby="source-explorer-heading">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="eyebrow mb-1">Research sources</p>
+                <h2 id="source-explorer-heading" className="text-base font-semibold text-foreground">Search GitHub, arXiv, and Hacker News</h2>
+                <p className="text-xs text-muted-foreground mt-1">Explore an idea directly, or use Scout to ingest bounded, evidence-backed signals into VC Brain.</p>
+              </div>
+              <Link href="/leads" className="text-xs font-semibold inline-flex items-center gap-1" style={{ color: '#0d9488' }}>
+                Open Scout <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <label className="flex items-center gap-2 flex-1 rounded-xl bg-white/70 border border-black/10 px-3 py-2.5">
+                <Search size={15} className="text-muted-foreground" />
+                <input
+                  value={sourceQuery}
+                  onChange={(event) => setSourceQuery(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === 'Enter') sourceUrl('github'); }}
+                  placeholder="Search a company, technology, or research area…"
+                  aria-label="Search research sources"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+              <div className="flex gap-2">
+                <button onClick={() => sourceUrl('github')} disabled={!sourceQuery.trim()} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-40" style={{ background: 'rgba(13,148,136,0.1)', color: '#0d9488' }}><GitBranch size={14} /> GitHub</button>
+                <button onClick={() => sourceUrl('arxiv')} disabled={!sourceQuery.trim()} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-40" style={{ background: 'rgba(124,58,237,0.1)', color: '#7c3aed' }}><BookOpen size={14} /> arXiv</button>
+                <button onClick={() => sourceUrl('hn')} disabled={!sourceQuery.trim()} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-40" style={{ background: 'rgba(217,119,6,0.1)', color: '#d97706' }}><MessageCircle size={14} /> HN</button>
+              </div>
+            </div>
+          </section>
 
           <div className="grid sm:grid-cols-2 gap-4">
             {ENTRY_POINTS.map((e) => {
