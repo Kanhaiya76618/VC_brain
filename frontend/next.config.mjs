@@ -21,7 +21,15 @@ const nextConfig = {
   },
 
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:4029';
+    // Vercel rewrites require an absolute URL. Accept a pasted Railway hostname
+    // as well as the preferred full https:// URL, while preserving localhost
+    // for local development.
+    const configuredBackendUrl = process.env.BACKEND_URL?.trim();
+    const backendUrl = configuredBackendUrl
+      ? (configuredBackendUrl.startsWith('http://') || configuredBackendUrl.startsWith('https://')
+        ? configuredBackendUrl
+        : `https://${configuredBackendUrl}`)
+      : 'http://localhost:4029';
     return [
       {
         source: '/api/:path*',
