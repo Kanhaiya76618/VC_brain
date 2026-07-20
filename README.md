@@ -125,18 +125,18 @@ Append-only, event-sourced: **nothing is ever overwritten** — corrections appe
 erDiagram
     PERSON ||--o{ EXTERNAL_IDENTITY : "resolved by strong keys only"
     COMPANY ||--o{ EXTERNAL_IDENTITY : has
-    PERSON ||--o{ RELATIONSHIP : ""
-    COMPANY ||--o{ RELATIONSHIP : ""
+    PERSON ||--o{ RELATIONSHIP : "role, claim-backed"
+    COMPANY ||--o{ RELATIONSHIP : "role, claim-backed"
     ARTIFACT ||--o{ CLAIM : "quoted in"
     CLAIM ||--o{ EVIDENCE_ASSESSMENT : "trust math"
     CLAIM ||--o{ VALIDATION : "independent verdicts"
     CLAIM }o--o{ CONTRADICTION : "pairs, preserved"
     PERSON ||--o{ FOUNDER_SCORE_EVENT : "never resets"
     PERSON ||--o{ CAPABILITY_SPRINT : "blind, opt-in"
-    COMPANY ||--o{ OPPORTUNITY : ""
+    COMPANY ||--o{ OPPORTUNITY : "inbound or outbound"
     OPPORTUNITY ||--o{ STAGE_TRANSITION : "instrumented"
     OPPORTUNITY ||--o{ AXIS_SCORE : "exactly 3, never blended"
-    OPPORTUNITY ||--o{ MEMO : ""
+    OPPORTUNITY ||--o{ MEMO : "evidence-chipped"
     COMPANY ||--o{ LEAD : "formation detector"
     LEAD ||--o{ OUTREACH_DRAFT : "human-approval-gated"
 
